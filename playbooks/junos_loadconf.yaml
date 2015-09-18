@@ -1,0 +1,58 @@
+#######################################################
+#                                                     #
+# junos-netconify over console does not support       #
+# set commands. you must use .conf format             #
+# ref:                                                #
+# https://github.com/Juniper/py-junos-eznc/issues/236 #
+#                                                     #
+#######################################################
+
+- name: Load merge a configuration to a device running Junos OS
+  hosts: all 
+  roles:
+  - Juniper.junos 
+  connection: local
+  gather_facts: no
+  vars_prompt:
+   - name: "user_name"
+     prompt: "Username"
+     private: no
+     default: root
+   - name: "user_pass"
+     prompt: "Password (press return to use SSH key, or blank password)"
+     default:
+   - name: "cfg_file"
+     prompt: "Specify configuration file path"
+     private: no
+
+  tasks:
+  - name: Checking CONSOLE connectivity
+    when: '"dev" in inventory_hostname'
+    wait_for: host={{ inventory_hostname }} timeout=5
+  - name: Load merge a configuration file via CONSOLE
+    when: '"dev" in inventory_hostname'
+    junos_install_config: 
+      host={{ inventory_hostname }}
+      user={{ user_name }}
+      passwd={{ user_pass }}
+      console=--port={{ inventory_hostname }}
+      file={{ cfg_file }}
+      overwrite='no'
+#      logfile=/var/log/ansible/junos/result.log
+#      diffs_file=/var/log/ansible/junos/diffs.log
+      comment="configured by ansible"
+
+  - name: Checking NETCONF connectivity
+    when: '"dev" not in inventory_hostname'
+    wait_for: host={{ inventory_hostname }} port=830  timeout=30
+  - name: Load merge a configuration file via NETCONF
+    when: '"dev" not in inventory_hostname'
+    junos_install_config: 
+      host={{ inventory_hostname }}
+      user={{ user_name }}
+      passwd={{ user_pass }}
+      file={{ cfg_file }}
+      overwrite=false
+#      logfile=/var/log/ansible/junos/result.log
+#      diffs_file=/var/log/ansible/junos/diffs.log
+      comment="configured by ansible"

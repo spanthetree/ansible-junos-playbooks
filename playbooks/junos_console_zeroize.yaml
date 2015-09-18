@@ -1,0 +1,36 @@
+#########################################################################################################################
+#                                                      									#
+# running this playbook will zeroize (fact restore)    									#
+# a junos device. you must enter "zeroize" when        									#
+# prompted in order to prevent mistaken zeroizes.      									#
+# this playbook was pulled from the below link:                                                          		#
+# http://www.juniper.net/techpubs/en_US/junos-ansible1.0/topics/example/junos-ansible-playbooks-device-zeroize.html     #
+#															#
+#########################################################################################################################
+
+
+- name: ZEROIZE devices running Junos OS
+  hosts: all
+  roles:
+  - Juniper.junos
+  connection: local
+  gather_facts: no
+  vars:
+    user: root
+  vars_prompt:
+  - name: zeroize
+    prompt: "Enter 'zeroize' to continue"
+    private: no
+  - name: password
+    prompt: "root password"
+    private: yes      
+
+  tasks:
+  - name: zeroize devices running Junos OS via CONSOLE
+    junos_zeroize: 
+      host={{ inventory_hostname }}
+      console="--port={{ inventory_hostname }}"
+      user={{ user }}
+      passwd={{ password }}
+      zeroize=zeroize
+      logfile=/var/log/ansible/junos/zeroize.log

@@ -1,0 +1,56 @@
+#########################################################################################################################
+#                                                                                                                       #
+# use to shut down or reboot en masse. you must enter "shutdown" when prompted.						#
+# this playbook is copied from the below link: 										#
+# http://www.juniper.net/techpubs/en_US/junos-ansible1.0/topics/example/junos-ansible-playbooks-device-rebooting.html   #
+#                                                                                                                       #
+#########################################################################################################################
+
+
+- name: Shutdown or reboot JunOS devices
+  hosts: all
+  roles:
+  - Juniper.junos    
+  connection: local
+  gather_facts: no
+
+  vars:
+    reboot_wait: 300
+  vars_prompt:
+   - name: "user_name"
+     prompt: "Username"
+     private: no
+     default: root
+   - name: "user_pass"
+     prompt: "Password (press return to use SSH key, or blank password)"
+     default:
+   - name: "restart"
+     prompt: "Reboot? yes/no"
+     private: no
+     default: "no"
+   - name: "shutdown"
+     prompt: "Enter 'shutdown' to continue"
+     private: no
+
+  tasks:
+  - name: Checking NETCONF connectivity
+    wait_for: host={{ inventory_hostname }} port=830 timeout=5
+  - name: Shutting down JunOS devices ... restart={{ restart }} 
+    junos_shutdown:
+      host={{ inventory_hostname }}
+      user={{ user_name }}
+      passwd={{ user_pass }}
+      shutdown={{ shutdown }}
+      reboot={{ restart }}
+    register: sd_result
+    notify:
+    - pause_for_reboot
+    - wait_reboot
+
+  handlers:
+  - name: pause_for_reboot
+    pause: seconds=60
+    when: sd_result.reboot == true
+  - name: wait_reboot
+    wait_for: host={{ inventory_hostname }} port=830 timeout={{ reboot_wait }}
+    when: sd_result.reboot == true

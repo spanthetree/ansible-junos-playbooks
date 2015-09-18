@@ -1,0 +1,53 @@
+##############################################################################################################################
+#                                                     									     #
+# use this playbook to check the software ver on a    									     #
+# device. can be adapted to get other "facts."         									     #
+# copied from below link:												     #
+# http://www.juniper.net/techpubs/en_US/junos-ansible1.0/topics/task/program/junos-ansible-playbooks-creating-executing.html #
+#                                                     									     #
+##############################################################################################################################
+
+- name: Get Device Facts
+  hosts: all 
+  roles:
+  - Juniper.junos 
+  connection: local
+  gather_facts: no
+  vars_prompt:
+   - name: "user_name"
+     prompt: "Username"
+     private: no
+     default: root
+   - name: "user_pass"
+     prompt: "Password (press return to use SSH key, or blank password)"
+     default:
+
+  tasks:
+  - name: Checking CONSOLE connectivity
+    when: '"dev" in inventory_hostname'
+    wait_for: host={{ inventory_hostname }} timeout=5
+  - name: Retrieve information via CONSOLE
+    when: '"dev" in inventory_hostname'
+    junos_get_facts:  
+      host={{ inventory_hostname }}
+      user={{ user_name }}
+      passwd={{ user_pass }}
+      console=--port={{ inventory_hostname }}
+    register: junos
+  - name: Printing host facts via CONSOLE
+    when: '"dev" in inventory_hostname'
+    debug: var=hostvars[inventory_hostname]
+
+  - name: Checking NETCONF connectivity
+    when: '"dev" not in inventory_hostname'
+    wait_for: host={{ inventory_hostname }} timeout=5
+  - name: Retrieve information via NETCONF
+    when: '"dev" not in inventory_hostname'
+    junos_get_facts:  
+      host={{ inventory_hostname }}
+      user={{ user_name }}
+      passwd={{ user_pass }}
+    register: junos
+  - name: Printing host facts via NETCONF
+    debug: var=hostvars[inventory_hostname]
+    when: '"dev" not in inventory_hostname'
